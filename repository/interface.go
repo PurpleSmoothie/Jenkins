@@ -6,7 +6,7 @@ import (
 )
 
 //go:generate mockgen -source=interface.go -destination=mock/repistory.go
-type UserProvider interface1 {
+type UserProvider interface {
 	CreateUser(ctx context.Context, user *model.User) error
 	DeleteUser(ctx context.Context, id string) error
 	UpdateUser(ctx context.Context, user *model.User) error

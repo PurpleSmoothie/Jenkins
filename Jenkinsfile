@@ -11,10 +11,16 @@ pipeline {
         
         stage('Find SQL Queries') {
             steps {
-                // Python работает везде где есть Jenkins!
-                sh 'python3 sql_scanner.py'
-                // или если python3 не работает:
-                sh 'python sql_scanner.py'
+                script {
+                    // Универсальный вызов для Linux и Windows
+                    if (isUnix()) {
+                        // Для Linux/macOS
+                        sh 'python3 sql_scanner.py'
+                    } else {
+                        // Для Windows
+                        bat 'python sql_scanner.py'
+                    }
+                }
             }
         }
         

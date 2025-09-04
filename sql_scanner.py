@@ -5,7 +5,7 @@ import glob
 from datetime import datetime
 
 def find_sql_queries():
-    print("🔍 Starting universal SQL query scanner...")
+    print("Starting universal SQL query scanner...")
     
     # Файлы для поиска (можно добавить любые другие)
     extensions = ['*.go', '*.py', '*.js', '*.java', '*.php', '*.rb', '*.ts', '*.cs']
@@ -30,7 +30,7 @@ def find_sql_queries():
                     except Exception as e:
                         print(f"Error reading {file_path}: {e}")
     
-    print("✅ Scan completed! Check found_queries.sql")
+    print("Scan completed! Check found_queries.sql")
 
 if __name__ == "__main__":
     find_sql_queries()

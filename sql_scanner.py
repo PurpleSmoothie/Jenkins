@@ -117,7 +117,7 @@ def find_sql_queries():
                                     })
                                     
                 except Exception as e:
-                    print(f"⚠️ Error reading {filepath}: {e}")
+                    print(f"Error reading {filepath}: {e}")
     
     # Записываем в файл
     with open('found_queries.sql', 'w', encoding='utf-8') as f:
@@ -128,8 +128,8 @@ def find_sql_queries():
             f.write(f"-- Original: {query['original']}\n")
             f.write(f"{query['normalized']}\n\n")
     
-    print(f"✅ Found {len(found_queries)} valid SQL queries in code")
-    print("📁 Results saved to found_queries.sql")
+    print(f"Found {len(found_queries)} valid SQL queries in code")
+    print("Results saved to found_queries.sql")
 
 if __name__ == "__main__":
     find_sql_queries()

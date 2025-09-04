@@ -12,13 +12,11 @@ pipeline {
         stage('Find SQL Queries') {
             steps {
                 script {
-                    // Универсальный вызов для Linux и Windows
                     if (isUnix()) {
-                        // Для Linux/macOS
                         sh 'python3 sql_scanner.py'
                     } else {
-                        // Для Windows
-                        bat 'python sql_scanner.py'
+                        // Используй полный путь к Python
+                        bat '"C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" sql_scanner.py'
                     }
                 }
             }

@@ -5,44 +5,18 @@ from datetime import datetime
 
 def normalize_sql_query(raw_query):
     """
-    Нормализует SQL-запрос, заменяя параметры на значения по умолчанию
+    Простая замена только параметров, без сложной логики
     """
-    # Сохраняем оригинальный запрос для отладки
-    original = raw_query
-    
-    # Базовые замены параметров
+    # Только базовые замены параметров
     replacements = [
-        (r'\$\d+', '1'),              # $1, $2, $3 → 1
-        (r'\\?', '1'),                # ? → 1
-        (r':\w+', '1'),               # :param → 1
-        (r'@\w+', '1'),               # @variable → 1
-        (r'%s', "'test'"),            # %s → 'test'
-        (r'%d', '1'),                 # %d → 1
+        (r'\$(\d+)', '1'),        # $1, $2 → 1
+        (r'\?', '1'),             # ? → 1
+        (r':\w+', '1'),           # :param → 1
     ]
     
     normalized = raw_query
     for pattern, replacement in replacements:
         normalized = re.sub(pattern, replacement, normalized, flags=re.IGNORECASE)
-    
-    # Умные замены в зависимости от контекста
-    if 'WHERE' in normalized.upper():
-        normalized = re.sub(r'WHERE\s+.+?=\s*[^\\s]+', 'WHERE 1=1', normalized, flags=re.IGNORECASE)
-    
-    if 'VALUES' in normalized.upper():
-        normalized = re.sub(r'VALUES\s*\([^)]+\)', 'VALUES (1)', normalized, flags=re.IGNORECASE)
-    
-    if 'LIMIT' in normalized.upper():
-        normalized = re.sub(r'LIMIT\s+\$\d+', 'LIMIT 10', normalized, flags=re.IGNORECASE)
-        normalized = re.sub(r'LIMIT\s+\\?', 'LIMIT 10', normalized, flags=re.IGNORECASE)
-    
-    if 'OFFSET' in normalized.upper():
-        normalized = re.sub(r'OFFSET\s+\$\d+', 'OFFSET 0', normalized, flags=re.IGNORECASE)
-        normalized = re.sub(r'OFFSET\s+\\?', 'OFFSET 0', normalized, flags=re.IGNORECASE)
-    
-    # Удаляем лишние точки с запятой (оставляем одну в конце)
-    normalized = re.sub(r';+', ';', normalized)
-    if not normalized.endswith(';'):
-        normalized += ';'
     
     return normalized
 

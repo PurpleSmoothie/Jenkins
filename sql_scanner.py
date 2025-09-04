@@ -75,7 +75,7 @@ def is_valid_sql_query(query):
     return True
 
 def find_sql_queries():
-    print("🔍 Starting advanced SQL query scanner...")
+    print("Starting advanced SQL query scanner...")
     
     # Улучшенные паттерны для разных типов SQL
     sql_patterns = {

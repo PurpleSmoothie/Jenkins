@@ -1,36 +1,135 @@
-#!/usr/bin/env python3
-import os
 import re
-import glob
+import os
+from pathlib import Path
 from datetime import datetime
 
+def normalize_sql_query(raw_query):
+    """
+    Нормализует SQL-запрос, заменяя параметры на значения по умолчанию
+    """
+    # Сохраняем оригинальный запрос для отладки
+    original = raw_query
+    
+    # Базовые замены параметров
+    replacements = [
+        (r'\$\d+', '1'),              # $1, $2, $3 → 1
+        (r'\\?', '1'),                # ? → 1
+        (r':\w+', '1'),               # :param → 1
+        (r'@\w+', '1'),               # @variable → 1
+        (r'%s', "'test'"),            # %s → 'test'
+        (r'%d', '1'),                 # %d → 1
+    ]
+    
+    normalized = raw_query
+    for pattern, replacement in replacements:
+        normalized = re.sub(pattern, replacement, normalized, flags=re.IGNORECASE)
+    
+    # Умные замены в зависимости от контекста
+    if 'WHERE' in normalized.upper():
+        normalized = re.sub(r'WHERE\s+.+?=\s*[^\\s]+', 'WHERE 1=1', normalized, flags=re.IGNORECASE)
+    
+    if 'VALUES' in normalized.upper():
+        normalized = re.sub(r'VALUES\s*\([^)]+\)', 'VALUES (1)', normalized, flags=re.IGNORECASE)
+    
+    if 'LIMIT' in normalized.upper():
+        normalized = re.sub(r'LIMIT\s+\$\d+', 'LIMIT 10', normalized, flags=re.IGNORECASE)
+        normalized = re.sub(r'LIMIT\s+\\?', 'LIMIT 10', normalized, flags=re.IGNORECASE)
+    
+    if 'OFFSET' in normalized.upper():
+        normalized = re.sub(r'OFFSET\s+\$\d+', 'OFFSET 0', normalized, flags=re.IGNORECASE)
+        normalized = re.sub(r'OFFSET\s+\\?', 'OFFSET 0', normalized, flags=re.IGNORECASE)
+    
+    # Удаляем лишние точки с запятой (оставляем одну в конце)
+    normalized = re.sub(r';+', ';', normalized)
+    if not normalized.endswith(';'):
+        normalized += ';'
+    
+    return normalized
+
+def is_valid_sql_query(query):
+    """
+    Проверяет, выглядит ли запрос как валидный SQL
+    """
+    # Минимальная длина для валидного запроса
+    if len(query) < 10:
+        return False
+    
+    # Должен содержать ключевые SQL-слова
+    sql_keywords = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP', 'FROM', 'WHERE', 'INTO', 'VALUES', 'SET']
+    if not any(keyword in query.upper() for keyword in sql_keywords):
+        return False
+    
+    # Не должен быть комментарием или обрывком
+    invalid_patterns = [
+        r'^--',      # Комментарии
+        r'^\/\*',    # Блок комментариев
+        r'^\.',      # Точки (обрывки)
+        r'^\,',      # Запятые
+        r'^\)',      # Закрывающие скобки
+    ]
+    
+    for pattern in invalid_patterns:
+        if re.match(pattern, query.strip()):
+            return False
+    
+    return True
+
 def find_sql_queries():
-    print("Starting universal SQL query scanner...")
+    print("🔍 Starting advanced SQL query scanner...")
     
-    # Файлы для поиска (можно добавить любые другие)
-    extensions = ['*.go', '*.py', '*.js', '*.java', '*.php', '*.rb', '*.ts', '*.cs']
-    sql_pattern = re.compile(r'(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP).*?;?$', re.IGNORECASE)
+    # Улучшенные паттерны для разных типов SQL
+    sql_patterns = {
+        'SELECT': re.compile(r'SELECT\s+.+?FROM\s+.+?(?:WHERE\s+.+?)?(?:LIMIT\s+.+?)?(?:OFFSET\s+.+?)?;?', re.IGNORECASE | re.DOTALL),
+        'INSERT': re.compile(r'INSERT\s+INTO\s+.+?VALUES\s*\(.+?\);?', re.IGNORECASE | re.DOTALL),
+        'UPDATE': re.compile(r'UPDATE\s+.+?SET\s+.+?(?:WHERE\s+.+?)?;?', re.IGNORECASE | re.DOTALL),
+        'DELETE': re.compile(r'DELETE\s+FROM\s+.+?(?:WHERE\s+.+?)?;?', re.IGNORECASE | re.DOTALL),
+        'CREATE': re.compile(r'CREATE\s+(?:TABLE|INDEX|VIEW)\s+.+?;?', re.IGNORECASE | re.DOTALL),
+        'ALTER': re.compile(r'ALTER\s+TABLE\s+.+?;?', re.IGNORECASE | re.DOTALL)
+    }
     
-    with open('found_queries.sql', 'w', encoding='utf-8') as output_file:
-        output_file.write(f"-- Found SQL queries on {datetime.now()}\n\n")
+    found_queries = []
+    
+    # Ищем во всех файлах проекта
+    for root, dirs, files in os.walk('.'):
+        for file in files:
+            # Ищем только в исходных файлах кода
+            if file.endswith(('.go', '.java', '.py', '.js', '.ts', '.php', '.rb')):
+                filepath = os.path.join(root, file)
+                try:
+                    with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read()
+                        
+                        for query_type, pattern in sql_patterns.items():
+                            matches = pattern.findall(content)
+                            for match in matches:
+                                clean_query = match.strip()
+                                
+                                # Проверяем валидность запроса
+                                if is_valid_sql_query(clean_query):
+                                    # Нормализуем запрос (заменяем параметры)
+                                    normalized_query = normalize_sql_query(clean_query)
+                                    
+                                    found_queries.append({
+                                        'file': filepath,
+                                        'type': query_type,
+                                        'original': clean_query,
+                                        'normalized': normalized_query
+                                    })
+                                    
+                except Exception as e:
+                    print(f"⚠️ Error reading {filepath}: {e}")
+    
+    # Записываем в файл
+    with open('found_queries.sql', 'w', encoding='utf-8') as f:
+        f.write(f"-- Found {len(found_queries)} valid SQL queries on {datetime.now()}\n\n")
         
-        for ext in extensions:
-            for file_path in glob.glob(f'**/{ext}', recursive=True):
-                if os.path.isfile(file_path):
-                    print(f"Scanning: {file_path}")
-                    
-                    try:
-                        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                            lines = f.readlines()
-                            
-                        for line_num, line in enumerate(lines, 1):
-                            if sql_pattern.search(line):
-                                output_file.write(f"-- From: {file_path}:{line_num}\n")
-                                output_file.write(f"{line.strip()}\n;\n\n")
-                    except Exception as e:
-                        print(f"Error reading {file_path}: {e}")
+        for i, query in enumerate(found_queries, 1):
+            f.write(f"-- Query #{i}: {query['file']} ({query['type']})\n")
+            f.write(f"-- Original: {query['original']}\n")
+            f.write(f"{query['normalized']}\n\n")
     
-    print("Scan completed! Check found_queries.sql")
+    print(f"✅ Found {len(found_queries)} valid SQL queries in code")
+    print("📁 Results saved to found_queries.sql")
 
 if __name__ == "__main__":
     find_sql_queries()

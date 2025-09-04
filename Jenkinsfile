@@ -5,7 +5,7 @@ pipeline {
             steps { 
                 git branch: 'main', 
                 url: 'https://github.com/PurpleSmoothie/Jenkins.git',
-                credentialsId: 'github-creds'
+                credentialsId: 'b395780c-f5db-4f07-b20f-0abea15002ca'
             }
         }
         

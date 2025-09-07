@@ -27,7 +27,7 @@ class LLMAnalyzer:
             )
             return json.loads(response.choices[0].message.content)
         except Exception as e:
-            print(f"⚠️ Ошибка LLM: {str(e)}")
+            print(f"Ошибка LLM: {str(e)}")
             return {
                 "evaluation": "ошибка_анализа",
                 "severity": "HIGH",

@@ -9,8 +9,8 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 class LLMAnalyzer:
     def __init__(self):
         self.client = openai.OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("LLM_BASE_URL")
+            api_key=os.getenv("DEEPSEEK_API_KEY", ""),
+            base_url="https://api.deepseek.com/v1"
         )
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
@@ -20,7 +20,7 @@ class LLMAnalyzer:
 
         try:
             response = self.client.chat.completions.create(
-                model="qwen/qwen3-coder:free",
+                model="deepseek-chat",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.2,
                 max_tokens=500

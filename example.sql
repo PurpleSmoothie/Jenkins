@@ -1,53 +1,68 @@
--- SELECT запросы (будут разрешены)
-SELECT * FROM users;
-SELECT u.username, o.amount FROM users u JOIN orders o ON u.id = o.user_id;
-SELECT COUNT(*) FROM products WHERE category = 'Electronics';
+SELECT * FROM Trip;
 
--- INSERT запросы (будут разрешены)
-INSERT INTO users (username, email) VALUES ('new_user', 'new@example.com');
-INSERT INTO orders (user_id, amount) VALUES (1, 150.00);
+SELECT t.plane, c.name as company_name, t.town_from, t.town_to
+FROM Trip t
+JOIN Companies c ON t.company = c.id;
 
--- UPDATE запросы (будут разрешены)
-UPDATE products SET price = 89.99 WHERE id = 5;
-UPDATE users SET is_active = false WHERE last_login < '2023-01-01';
+SELECT town_from, COUNT(*) as flight_count
+FROM Trip
+GROUP BY town_from;
 
--- DELETE запросы с WHERE (будут разрешены)
-DELETE FROM order_items WHERE order_id = 100;
-DELETE FROM users WHERE is_active = false AND created_at < '2022-01-01';
+INSERT INTO Passengers (full_name, phone, email)
+VALUES ('Иван Иванов', '+79161234567', 'ivan@mail.com');
 
--- Опасные запросы (будут заблокированы)
-DELETE FROM users;  -- Без WHERE
-DROP TABLE orders;  -- DROP операция
-TRUNCATE products;  -- TRUNCATE операция
+INSERT INTO Pass_in_trip (trip, passenger, place)
+VALUES (1, 1, '12A');
 
--- Сложный JOIN запрос
+UPDATE Passengers
+SET email = 'new_email@mail.com'
+WHERE id = 1;
+
+UPDATE Trip
+SET time_in = '2024-01-15 14:30:00'
+WHERE town_to = 'Москва' AND time_out < '2024-01-15';
+
+DELETE FROM Pass_in_trip
+WHERE trip = 5;
+
+DELETE FROM Passengers
+WHERE is_active = false AND created_at < '2023-01-01';
+
 SELECT
-    u.username,
-    p.name,
-    oi.quantity,
-    oi.price * oi.quantity as total_price
-FROM users u
-JOIN orders o ON u.id = o.user_id
-JOIN order_items oi ON o.id = oi.order_id
-JOIN products p ON oi.product_id = p.id
-WHERE o.status = 'completed'
-ORDER BY total_price DESC;
+p.full_name,
+c.name as company_name,
+t.plane,
+t.town_from,
+t.town_to,
+pit.place,
+t.time_out,
+t.time_in
+FROM Passengers p
+JOIN Pass_in_trip pit ON p.id = pit.passenger
+JOIN Trip t ON pit.trip = t.id
+JOIN Companies c ON t.company = c.id
+WHERE t.town_to = 'Москва'
+ORDER BY t.time_out DESC;
 
--- Агрегирующий запрос с GROUP BY
 SELECT
-    p.category,
-    COUNT(oi.id) as total_sold,
-    SUM(oi.quantity * oi.price) as total_revenue
-FROM products p
-JOIN order_items oi ON p.id = oi.product_id
-GROUP BY p.category
-HAVING SUM(oi.quantity * oi.price) > 1000;
+c.name as company_name,
+COUNT(t.id) as total_flights,
+COUNT(DISTINCT pit.passenger) as unique_passengers
+FROM Companies c
+JOIN Trip t ON c.id = t.company
+LEFT JOIN Pass_in_trip pit ON t.id = pit.trip
+GROUP BY c.name
+HAVING COUNT(t.id) > 10;
 
--- Запрос с подзапросом
-SELECT username, email
-FROM users
+SELECT full_name, phone
+FROM Passengers
 WHERE id IN (
-    SELECT user_id
-    FROM orders
-    WHERE amount > 500 AND status = 'completed'
+SELECT passenger
+FROM Pass_in_trip
+WHERE trip IN (
+SELECT id
+FROM Trip
+WHERE town_from = 'Париж' AND time_out > '2024-01-01'
+)
 );
+

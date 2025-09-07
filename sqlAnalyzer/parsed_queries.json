@@ -1,0 +1,77 @@
+[
+  {
+    "query": "-- SELECT запросы (будут разрешены)\nSELECT * FROM users;",
+    "type": "SELECT",
+    "file_path": ".\\example.sql"
+  },
+  {
+    "query": "SELECT u.username, o.amount FROM users u JOIN orders o ON u.id = o.user_id;",
+    "type": "SELECT",
+    "file_path": ".\\example.sql"
+  },
+  {
+    "query": "SELECT COUNT(*) FROM products WHERE category = 'Electronics';",
+    "type": "SELECT",
+    "file_path": ".\\example.sql"
+  },
+  {
+    "query": "-- INSERT запросы (будут разрешены)\nINSERT INTO users (username, email) VALUES ('new_user', 'new@example.com');",
+    "type": "INSERT",
+    "file_path": ".\\example.sql"
+  },
+  {
+    "query": "INSERT INTO orders (user_id, amount) VALUES (1, 150.00);",
+    "type": "INSERT",
+    "file_path": ".\\example.sql"
+  },
+  {
+    "query": "-- UPDATE запросы (будут разрешены)\nUPDATE products SET price = 89.99 WHERE id = 5;",
+    "type": "UPDATE",
+    "file_path": ".\\example.sql"
+  },
+  {
+    "query": "UPDATE users SET is_active = false WHERE last_login < '2023-01-01';",
+    "type": "UPDATE",
+    "file_path": ".\\example.sql"
+  },
+  {
+    "query": "-- DELETE запросы с WHERE (будут разрешены)\nDELETE FROM order_items WHERE order_id = 100;",
+    "type": "DELETE",
+    "file_path": ".\\example.sql"
+  },
+  {
+    "query": "DELETE FROM users WHERE is_active = false AND created_at < '2022-01-01';",
+    "type": "DELETE",
+    "file_path": ".\\example.sql"
+  },
+  {
+    "query": "-- Опасные запросы (будут заблокированы)\nDELETE FROM users;  -- Без WHERE",
+    "type": "DELETE",
+    "file_path": ".\\example.sql"
+  },
+  {
+    "query": "DROP TABLE orders;  -- DROP операция",
+    "type": "DROP",
+    "file_path": ".\\example.sql"
+  },
+  {
+    "query": "TRUNCATE products;  -- TRUNCATE операция",
+    "type": "TRUNCATE",
+    "file_path": ".\\example.sql"
+  },
+  {
+    "query": "-- Сложный JOIN запрос\nSELECT\n    u.username,\n    p.name,\n    oi.quantity,\n    oi.price * oi.quantity as total_price\nFROM users u\nJOIN orders o ON u.id = o.user_id\nJOIN order_items oi ON o.id = oi.order_id\nJOIN products p ON oi.product_id = p.id\nWHERE o.status = 'completed'\nORDER BY total_price DESC;",
+    "type": "SELECT",
+    "file_path": ".\\example.sql"
+  },
+  {
+    "query": "-- Агрегирующий запрос с GROUP BY\nSELECT\n    p.category,\n    COUNT(oi.id) as total_sold,\n    SUM(oi.quantity * oi.price) as total_revenue\nFROM products p\nJOIN order_items oi ON p.id = oi.product_id\nGROUP BY p.category\nHAVING SUM(oi.quantity * oi.price) > 1000;",
+    "type": "SELECT",
+    "file_path": ".\\example.sql"
+  },
+  {
+    "query": "-- Запрос с подзапросом\nSELECT username, email\nFROM users\nWHERE id IN (\n    SELECT user_id\n    FROM orders\n    WHERE amount > 500 AND status = 'completed'\n);",
+    "type": "SELECT",
+    "file_path": ".\\example.sql"
+  }
+]

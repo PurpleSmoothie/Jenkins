@@ -7,6 +7,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def run_explain_analyze():
+    # Проверка обязательных переменных
+    required_vars = ['DB_NAME', 'DB_USER', 'DB_PASSWORD']
+    for var in required_vars:
+        if not os.getenv(var):
+            raise ValueError(f"Missing required environment variable: {var}")
+    
     # Подключение к тестовой БД
     conn = psycopg2.connect(
         host=os.getenv("DB_HOST", "db"),

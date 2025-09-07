@@ -42,12 +42,23 @@ def run_explain_analyze():
             results.append({
                 "query": query,
                 "type": query_obj["type"],
-                "explain_output": explain_result
+                "tables": [],  # Пустой список, так как мы не извлекаем таблицы
+                "explain": explain_result.split('\n'),  # Преобразуем в список строк
+                "file_path": query_obj["file_path"],
+                "error": None
             })
             cursor.execute("ROLLBACK;")  # Откатываем изменения
         except Exception as e:
             cursor.execute("ROLLBACK;")
             print(f"Error analyzing query: {query}\n{str(e)}")
+            results.append({
+                "query": query,
+                "type": query_obj["type"],
+                "tables": [],
+                "explain": [],
+                "file_path": query_obj["file_path"],
+                "error": str(e)
+            })
 
     conn.close()
 

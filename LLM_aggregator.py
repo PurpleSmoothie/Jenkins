@@ -67,7 +67,7 @@ class LLMAnalyzer:
 {query_data['query']}
 
 EXPLAIN ANALYZE вывод:
-{' '.join(query_data['explain']) if query_data['explain'] else 'N/A'}
+{' '.join(query_data['explain_output']) if query_data['explain'] else 'N/A'}
 
 Таблицы: {', '.join(query_data['tables']) if query_data['tables'] else 'N/A'}
 Тип запроса: {query_data['type']}

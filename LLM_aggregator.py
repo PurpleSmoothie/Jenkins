@@ -27,7 +27,7 @@ class LLMAnalyzer:
             )
             return json.loads(response.choices[0].message.content)
         except Exception as e:
-            print(f"⚠️ Ошибка LLM: {str(e)}")
+            print(f"Ошибка LLM: {str(e)}")
             return {
                 "evaluation": "ошибка_анализа",
                 "severity": "HIGH",
@@ -35,6 +35,9 @@ class LLMAnalyzer:
             }
 
     def _build_prompt(self, query_data):
+        explain_output = ' '.join(query_data.get('explain_output', [])) if query_data.get('explain_output') else 'N/A'
+        tables = ', '.join(query_data.get('tables', [])) if query_data.get('tables') else 'N/A'
+        
         return f"""
 Проанализируй SQL-запрос и его EXPLAIN ANALYZE вывод по следующим критериям:
 
@@ -67,9 +70,9 @@ class LLMAnalyzer:
 {query_data['query']}
 
 EXPLAIN ANALYZE вывод:
-{' '.join(query_data['explain']) if query_data['explain'] else 'N/A'}
+{explain_output}
 
-Таблицы: {', '.join(query_data['tables']) if query_data['tables'] else 'N/A'}
+Таблицы: {tables}
 Тип запроса: {query_data['type']}
 
 Ответ должен быть в строгом JSON формате:
@@ -114,6 +117,11 @@ def check_jenkins_criteria(report):
     improvable_count = 0
     total = len(report)
 
+    # Если нет запросов для анализа
+    if total == 0:
+        print("⚠️ Нет запросов для анализа!")
+        return False
+
     for item in report:
         eval = item["analysis"]["evaluation"]
         if eval in ["CRITICAL"]:
@@ -122,18 +130,19 @@ def check_jenkins_criteria(report):
             improvable_count += 1
 
     print(f"\n📊 Результаты анализа:")
+    print(f"- Всего запросов: {total}")
     print(f"- Критических запросов: {critical_count}")
     print(f"- Запросов для улучшения: {improvable_count}/{total} ({improvable_count / total:.0%})")
 
     if critical_count > 0:
-        print("Обнаружены критические запросы! Запрещаю деплой.")
+        print("❌ Обнаружены критические запросы! Запрещаю деплой.")
         return False
 
     if improvable_count / total > 0.6:
-        print("Слишком много запросов требуют улучшения (>60%). Запрещаю деплой.")
+        print("❌ Слишком много запросов требуют улучшения (>60%). Запрещаю деплой.")
         return False
 
-    print("Все запросы соответствуют стандартам. Разрешаю деплой.")
+    print("✅ Все запросы соответствуют стандартам. Разрешаю деплой.")
     return True
 
 

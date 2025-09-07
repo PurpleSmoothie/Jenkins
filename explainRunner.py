@@ -7,6 +7,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def run_explain_analyze():
+    # Проверка обязательных переменных
+    required_vars = ['DB_NAME', 'DB_USER', 'DB_PASSWORD']
+    for var in required_vars:
+        if not os.getenv(var):
+            raise ValueError(f"Missing required environment variable: {var}")
+    
     # Подключение к тестовой БД
     conn = psycopg2.connect(
         host=os.getenv("DB_HOST", "db"),
@@ -36,12 +42,23 @@ def run_explain_analyze():
             results.append({
                 "query": query,
                 "type": query_obj["type"],
-                "explain_output": explain_result
+                "tables": [],  # Пустой список, так как мы не извлекаем таблицы
+                "explain_output": explain_result.split('\n'),  # Преобразуем в список строк
+                "file_path": query_obj["file_path"],
+                "error": None
             })
             cursor.execute("ROLLBACK;")  # Откатываем изменения
         except Exception as e:
             cursor.execute("ROLLBACK;")
             print(f"Error analyzing query: {query}\n{str(e)}")
+            results.append({
+                "query": query,
+                "type": query_obj["type"],
+                "tables": [],
+                "explain_output": [],
+                "file_path": query_obj["file_path"],
+                "error": str(e)
+            })
 
     conn.close()
 

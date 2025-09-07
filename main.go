@@ -1,5 +1,0 @@
-package jenkins
-
-func main() {
-
-}

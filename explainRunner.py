@@ -43,7 +43,7 @@ def run_explain_analyze():
                 "query": query,
                 "type": query_obj["type"],
                 "tables": [],  # Пустой список, так как мы не извлекаем таблицы
-                "explain": explain_result.split('\n'),  # Преобразуем в список строк
+                "explain_output": explain_result.split('\n'),  # Преобразуем в список строк
                 "file_path": query_obj["file_path"],
                 "error": None
             })
@@ -55,7 +55,7 @@ def run_explain_analyze():
                 "query": query,
                 "type": query_obj["type"],
                 "tables": [],
-                "explain": [],
+                "explain_output": [],
                 "file_path": query_obj["file_path"],
                 "error": str(e)
             })

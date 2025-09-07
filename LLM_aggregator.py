@@ -25,7 +25,7 @@ class LLMAnalyzer:
                 temperature=0.2,
                 max_tokens=500
             )
-            return json.loads(response.choices[0.message.content)
+            return json.loads(response.choices[0].message.content)
         except Exception as e:
             print(f"Ошибка LLM: {str(e)}")
             return {

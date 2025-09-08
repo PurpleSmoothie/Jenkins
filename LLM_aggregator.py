@@ -29,7 +29,7 @@ class OpenRouterAnalyzer:
 
 
         self.base_url = "https://openrouter.ai/api/v1"
-        self.model = "google/gemma-7b-it"
+        self.model = "mistralai/mistral-7b-instruct:free"
 
         try:
             self.client = openai.OpenAI(

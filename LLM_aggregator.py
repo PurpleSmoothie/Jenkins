@@ -22,16 +22,17 @@ logger = logging.getLogger(__name__)
 
 class DeepSeekAnalyzer:
     def __init__(self, api_key: str = None):
-        self.api_key = api_key or os.getenv("DEEPSEEK_API_KEY")
+        # self.api_key = api_key or os.getenv("DEEPSEEK_API_KEY")
 
         if not self.api_key:
-            logger.error("❌ Не задан DEEPSEEK_API_KEY в переменных окружения!")
-            raise ValueError("API ключ DeepSeek не найден")
+            logger.error("❌ Не задан KEY в переменных окружения!")
+            raise ValueError("API ключ  не найден")
 
         self.client = openai.OpenAI(
-            api_key=self.api_key,
-            base_url="https://api.deepseek.com/v1"
+            api_key="free",
+            base_url="https://openrouter.ai/api/v1"
         )
+        self.model = "google/gemini-flash-1.5-8b"  # Бесплатная модель
 
     def _build_prompt(self, query_data: Dict[str, Any]) -> str:
         """Формируем промпт для DeepSeek"""

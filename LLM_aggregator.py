@@ -29,7 +29,7 @@ class OpenRouterAnalyzer:
 
 
         self.base_url = "https://openrouter.ai/api/v1"
-        self.model = "deepseek/deepseek-chat-v3.1:free"
+        self.model = "mistralai/mistral-7b-instruct:free"
 
         try:
             self.client = openai.OpenAI(

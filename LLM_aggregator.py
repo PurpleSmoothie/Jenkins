@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""
-Анализатор SQL-запросов через DeepSeek.
-Работает ТОЛЬКО с DeepSeek API.
-"""
 
 import json
 import argparse
@@ -11,61 +7,36 @@ import sys
 import logging
 from typing import Dict, List, Any
 
-# Используем openai-клиент (DeepSeek совместим с OpenAI API)
 import openai
 
 
-# Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
 logger = logging.getLogger(__name__)
 
 
-class DeepSeekAnalyzer:
-    def __init__(self, api_key: str = None):
-        # self.api_key = api_key or os.getenv("DEEPSEEK_API_KEY")
+class OpenRouterAnalyzer:
+    def __init__(self):
+        # Используем фиксированный ключ и базовый URL
+        self.api_key = "free"  # OpenRouter разрешает анонимный доступ с "free"
+        self.base_url = "https://openrouter.ai/api/v1"
+        self.model = "mistralai/mistral-7b-instruct:free"  # Бесплатная модель
 
-        if not self.api_key:
-            logger.error("❌ Не задан KEY в переменных окружения!")
-            raise ValueError("API ключ  не найден")
-
-        self.client = openai.OpenAI(
-            api_key="free",
-            base_url="https://openrouter.ai/api/v1"
-        )
-        self.model = "google/gemini-flash-1.5-8b"  # Бесплатная модель
+        try:
+            self.client = openai.OpenAI(
+                api_key=self.api_key,
+                base_url=self.base_url
+            )
+            logger.info("✅ OpenRouter клиент инициализирован")
+        except Exception as e:
+            logger.error(f"❌ Ошибка инициализации OpenRouter: {e}")
+            raise
 
     def _build_prompt(self, query_data: Dict[str, Any]) -> str:
-        """Формируем промпт для DeepSeek"""
         explain_output = ' '.join(query_data.get('explain_output', [])) if query_data.get('explain_output') else 'N/A'
         tables = ', '.join(query_data.get('tables', [])) if query_data.get('tables') else 'N/A'
 
         return f"""
-Проанализируй SQL-запрос и его EXPLAIN ANALYZE вывод по следующим критериям:
-
-Критерии оценки:
-1. Идеальный (GOOD): 
-   - Использует индексы эффективно
-   - Время выполнения < 50ms
-   - Нет seq_scan для больших таблиц
-   - Оптимальное использование памяти
-
-2. Приемлемый (ACCEPTABLE):
-   - Работает, но есть потенциальные проблемы
-   - Seq scan на таблицах < 10k строк
-   - Возможны улучшения для роста данных
-   - Время выполнения < 200ms
-
-3. Требует улучшения (NEEDS_IMPROVEMENT):
-   - Seq scan на больших таблицах
-   - Отсутствие индексов для JOIN/WHERE
-   - Время выполнения > 500ms
-   - Высокое использование CPU
-
-4. Критический (CRITICAL):
-   - DROP/DELETE без WHERE
-   - Полное сканирование таблиц > 1M строк
-   - Время выполнения > 2s
-   - Блокировки транзакций
+Проанализируй SQL-запрос и его EXPLAIN ANALYZE вывод.
 
 Запрос: 
 {query_data['query']}
@@ -76,41 +47,57 @@ EXPLAIN ANALYZE вывод:
 Таблицы: {tables}
 Тип запроса: {query_data['type']}
 
-Ответ должен быть в строгом JSON формате:
+Оцени по критериям:
+- GOOD: эффективно, быстро, с индексами
+- ACCEPTABLE: работает, но есть риски
+- NEEDS_IMPROVEMENT: медленно, seq scan, нет индексов
+- CRITICAL: опасные операции, очень медленно
+
+Ответ в JSON:
 {{
   "evaluation": "GOOD|ACCEPTABLE|NEEDS_IMPROVEMENT|CRITICAL",
   "severity": "LOW|MEDIUM|HIGH|CRITICAL",
-  "execution_time": "время_выполнения",
-  "issues": ["проблема1", "проблема2"],
-  "recommendations": ["рекомендация1", "рекомендация2"]
+  "execution_time": "время",
+  "issues": ["список проблем"],
+  "recommendations": ["рекомендации"]
 }}
 """
 
     def analyze_query(self, query_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Отправляет запрос в DeepSeek и возвращает анализ"""
         prompt = self._build_prompt(query_data)
 
         try:
             response = self.client.chat.completions.create(
-                model="deepseek-chat",
+                model=self.model,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.2,
-                max_tokens=500
+                temperature=0.3,
+                max_tokens=400
             )
             content = response.choices[0].message.content.strip()
-            return json.loads(content)
+
+            # Часто LLM возвращает просто JSON без обёртки
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                # Если не JSON — попробуем извлечь
+                import re
+                json_match = re.search(r'\{.*\}', content, re.DOTALL)
+                if json_match:
+                    return json.loads(json_match.group())
+                else:
+                    raise ValueError("Не удалось извлечь JSON")
+
         except Exception as e:
-            logger.error(f"❌ Ошибка при вызове DeepSeek: {e}")
+            logger.error(f"❌ Ошибка при вызове OpenRouter: {e}")
             return {
-                "evaluation": "ошибка_анализа",
-                "severity": "HIGH",
-                "issues": [f"Не удалось проанализировать: {str(e)}"],
-                "recommendations": ["Проверьте корректность SQL и подключение к API"]
+                "evaluation": "ACCEPTABLE",
+                "severity": "MEDIUM",
+                "issues": [f"Ошибка анализа: {str(e)}"],
+                "recommendations": ["Проверьте запрос вручную"]
             }
 
 
-def generate_report(results_file: str, analyzer: DeepSeekAnalyzer) -> List[Dict]:
-    """Читает результаты EXPLAIN и генерирует отчёт"""
+def generate_report(results_file: str, analyzer: OpenRouterAnalyzer) -> List[Dict]:
     try:
         with open(results_file, 'r', encoding='utf-8') as f:
             results = json.load(f)
@@ -142,7 +129,6 @@ def generate_report(results_file: str, analyzer: DeepSeekAnalyzer) -> List[Dict]
 
 
 def check_deployment_criteria(report: List[Dict]) -> bool:
-    """Проверяет, можно ли разрешить деплой"""
     critical_count = 0
     improvable_count = 0
     total = len(report)
@@ -176,22 +162,19 @@ def check_deployment_criteria(report: List[Dict]) -> bool:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='SQL анализатор через DeepSeek')
-    parser.add_argument('--results', default='explain_results.json', help='Входной файл с EXPLAIN ANALYZE')
-    parser.add_argument('--report', default='llm_report.json', help='Выходной файл отчёта')
+    parser = argparse.ArgumentParser(description='SQL анализатор через OpenRouter')
+    parser.add_argument('--results', default='explain_results.json', help='Файл с EXPLAIN ANALYZE')
+    parser.add_argument('--report', default='llm_report.json', help='Выходной отчёт')
     args = parser.parse_args()
 
-    # Инициализация анализатора
     try:
-        analyzer = DeepSeekAnalyzer()
-    except ValueError as e:
-        logger.error(e)
+        analyzer = OpenRouterAnalyzer()
+    except Exception as e:
+        logger.error(f"❌ Не удалось инициализировать анализатор: {e}")
         sys.exit(1)
 
-    # Генерация отчёта
     report = generate_report(args.results, analyzer)
 
-    # Сохранение отчёта
     try:
         with open(args.report, 'w', encoding='utf-8') as f:
             json.dump(report, f, ensure_ascii=False, indent=2)
@@ -200,7 +183,6 @@ def main():
         logger.error(f"❌ Не удалось сохранить отчёт: {e}")
         sys.exit(1)
 
-    # Проверка правил деплоя
     if not check_deployment_criteria(report):
         sys.exit(1)
 

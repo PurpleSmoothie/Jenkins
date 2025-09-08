@@ -15,14 +15,13 @@ from typing import Dict, List, Any
 import openai
 
 
-# Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
 logger = logging.getLogger(__name__)
 
 
 class OpenRouterAnalyzer:
     def __init__(self):
-        # Получаем API-ключ из переменной окружения
+
         self.api_key = os.getenv("OPENROUTER_API_KEY")
         if not self.api_key:
             logger.error("❌ OPENROUTER_API_KEY не задан в переменных окружения!")
@@ -30,8 +29,7 @@ class OpenRouterAnalyzer:
 
 
         self.base_url = "https://openrouter.ai/api/v1"
-        # 💡 Используем более умную модель
-        self.model = "mistralai/mistral-7b-instruct:free"
+        self.model = "deepseek/deepseek-chat-v3.1:free"
 
         try:
             self.client = openai.OpenAI(

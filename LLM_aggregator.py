@@ -72,7 +72,7 @@ EXPLAIN ANALYZE вывод:
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
-                max_tokens=400
+                max_tokens=700
             )
             content = response.choices[0].message.content.strip()
 

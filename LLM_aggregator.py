@@ -29,7 +29,7 @@ class OpenRouterAnalyzer:
 
 
         self.base_url = "https://openrouter.ai/api/v1"
-        self.model = "deepseek/deepseek-chat-v3.1:free"
+        self.model = "google/gemma-7b-it"
 
         try:
             self.client = openai.OpenAI(

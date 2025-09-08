@@ -28,10 +28,10 @@ class OpenRouterAnalyzer:
             logger.error("❌ OPENROUTER_API_KEY не задан в переменных окружения!")
             raise ValueError("API ключ не найден")
 
-        # ✅ Исправлено: убраны лишние пробелы
+
         self.base_url = "https://openrouter.ai/api/v1"
         # 💡 Используем более умную модель
-        self.model = "qwen/qwen-72b-chat:free"  # Работает лучше, чем mistral
+        self.model = "mistralai/mistral-7b-instruct:free"
 
         try:
             self.client = openai.OpenAI(

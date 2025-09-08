@@ -49,7 +49,7 @@ class OpenRouterAnalyzer:
         tables = ', '.join(query_data.get('tables', [])) if query_data.get('tables') else 'N/A'
 
         return f"""
-Проанализируй SQL-запрос и его EXPLAIN ANALYZE вывод. Верни ТОЛЬКО валидный JSON.
+Проанализируй SQL-запрос и его EXPLAIN ANALYZE вывод. Отвечай ТОЛЬКО на русском языке. Верни ТОЛЬКО валидный JSON.
 
 Запрос: 
 {query_data['query']}

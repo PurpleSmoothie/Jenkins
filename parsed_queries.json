@@ -1,76 +1,61 @@
 [
   {
-    "query": "-- SELECT запросы (будут разрешены)\nSELECT * FROM users;",
+    "query": "SELECT * FROM Trip;",
     "type": "SELECT",
     "file_path": ".\\example.sql"
   },
   {
-    "query": "SELECT u.username, o.amount FROM users u JOIN orders o ON u.id = o.user_id;",
+    "query": "SELECT t.plane, c.name as company_name, t.town_from, t.town_to\nFROM Trip t\nJOIN Companies c ON t.company = c.id;",
     "type": "SELECT",
     "file_path": ".\\example.sql"
   },
   {
-    "query": "SELECT COUNT(*) FROM products WHERE category = 'Electronics';",
+    "query": "SELECT town_from, COUNT(*) as flight_count\nFROM Trip\nGROUP BY town_from;",
     "type": "SELECT",
     "file_path": ".\\example.sql"
   },
   {
-    "query": "-- INSERT запросы (будут разрешены)\nINSERT INTO users (username, email) VALUES ('new_user', 'new@example.com');",
+    "query": "INSERT INTO Passengers (full_name, phone, email)\nVALUES ('Иван Иванов', '+79161234567', 'ivan@mail.com');",
     "type": "INSERT",
     "file_path": ".\\example.sql"
   },
   {
-    "query": "INSERT INTO orders (user_id, amount) VALUES (1, 150.00);",
+    "query": "INSERT INTO Pass_in_trip (trip, passenger, place)\nVALUES (1, 1, '12A');",
     "type": "INSERT",
     "file_path": ".\\example.sql"
   },
   {
-    "query": "-- UPDATE запросы (будут разрешены)\nUPDATE products SET price = 89.99 WHERE id = 5;",
+    "query": "UPDATE Passengers\nSET email = 'new_email@mail.com'\nWHERE id = 1;",
     "type": "UPDATE",
     "file_path": ".\\example.sql"
   },
   {
-    "query": "UPDATE users SET is_active = false WHERE last_login < '2023-01-01';",
+    "query": "UPDATE Trip\nSET time_in = '2024-01-15 14:30:00'\nWHERE town_to = 'Москва' AND time_out < '2024-01-15';",
     "type": "UPDATE",
     "file_path": ".\\example.sql"
   },
   {
-    "query": "-- DELETE запросы с WHERE (будут разрешены)\nDELETE FROM order_items WHERE order_id = 100;",
+    "query": "DELETE FROM Pass_in_trip\nWHERE trip = 5;",
     "type": "DELETE",
     "file_path": ".\\example.sql"
   },
   {
-    "query": "DELETE FROM users WHERE is_active = false AND created_at < '2022-01-01';",
+    "query": "DELETE FROM Passengers\nWHERE is_active = false AND created_at < '2023-01-01';",
     "type": "DELETE",
     "file_path": ".\\example.sql"
   },
   {
-    "query": "-- Опасные запросы (будут заблокированы)\nDELETE FROM users;  -- Без WHERE",
-    "type": "DELETE",
-    "file_path": ".\\example.sql"
-  },
-  {
-    "query": "DROP TABLE orders;  -- DROP операция",
-    "type": "DROP",
-    "file_path": ".\\example.sql"
-  },
-  {
-    "query": "TRUNCATE products;  -- TRUNCATE операция",
-    "type": "TRUNCATE",
-    "file_path": ".\\example.sql"
-  },
-  {
-    "query": "-- Сложный JOIN запрос\nSELECT\n    u.username,\n    p.name,\n    oi.quantity,\n    oi.price * oi.quantity as total_price\nFROM users u\nJOIN orders o ON u.id = o.user_id\nJOIN order_items oi ON o.id = oi.order_id\nJOIN products p ON oi.product_id = p.id\nWHERE o.status = 'completed'\nORDER BY total_price DESC;",
+    "query": "SELECT\np.full_name,\nc.name as company_name,\nt.plane,\nt.town_from,\nt.town_to,\npit.place,\nt.time_out,\nt.time_in\nFROM Passengers p\nJOIN Pass_in_trip pit ON p.id = pit.passenger\nJOIN Trip t ON pit.trip = t.id\nJOIN Companies c ON t.company = c.id\nWHERE t.town_to = 'Москва'\nORDER BY t.time_out DESC;",
     "type": "SELECT",
     "file_path": ".\\example.sql"
   },
   {
-    "query": "-- Агрегирующий запрос с GROUP BY\nSELECT\n    p.category,\n    COUNT(oi.id) as total_sold,\n    SUM(oi.quantity * oi.price) as total_revenue\nFROM products p\nJOIN order_items oi ON p.id = oi.product_id\nGROUP BY p.category\nHAVING SUM(oi.quantity * oi.price) > 1000;",
+    "query": "SELECT\nc.name as company_name,\nCOUNT(t.id) as total_flights,\nCOUNT(DISTINCT pit.passenger) as unique_passengers\nFROM Companies c\nJOIN Trip t ON c.id = t.company\nLEFT JOIN Pass_in_trip pit ON t.id = pit.trip\nGROUP BY c.name\nHAVING COUNT(t.id) > 10;",
     "type": "SELECT",
     "file_path": ".\\example.sql"
   },
   {
-    "query": "-- Запрос с подзапросом\nSELECT username, email\nFROM users\nWHERE id IN (\n    SELECT user_id\n    FROM orders\n    WHERE amount > 500 AND status = 'completed'\n);",
+    "query": "SELECT full_name, phone\nFROM Passengers\nWHERE id IN (\nSELECT passenger\nFROM Pass_in_trip\nWHERE trip IN (\nSELECT id\nFROM Trip\nWHERE town_from = 'Париж' AND time_out > '2024-01-01'\n)\n);",
     "type": "SELECT",
     "file_path": ".\\example.sql"
   }

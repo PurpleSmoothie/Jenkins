@@ -16,8 +16,9 @@ logger = logging.getLogger(__name__)
 
 class OpenRouterAnalyzer:
     def __init__(self):
-        # Используем фиксированный ключ и базовый URL
-        self.api_key = "free"  # OpenRouter разрешает анонимный доступ с "free"
+        self.api_key = os.getenv("OPENROUTER_API_KEY")
+        if not self.api_key:
+            raise ValueError("OPENROUTER_API_KEY не задан")
         self.base_url = "https://openrouter.ai/api/v1"
         self.model = "mistralai/mistral-7b-instruct:free"  # Бесплатная модель
 

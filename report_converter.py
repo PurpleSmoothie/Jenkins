@@ -49,11 +49,29 @@ def generate_table_html(data):
 
     html = []
     html.append('<div class="container">')
+    
+    # flex-контейнер для заголовка + фильтра + легенды
+    html.append('<div class="header-row">')
+    
+    # Левая часть: заголовок + фильтр
+    html.append('<div class="header-left">')
     html.append('<h1>Отчёт по SQL-запросам</h1>')
     html.append('<div class="controls">')
     html.append('<input id="filter" placeholder="Фильтр (по любому полю)..." oninput="filterTable()" />')
-    html.append('</div>')
+    html.append('</div>')  # .controls
+    html.append('</div>')  # .header-left
 
+    # Правая часть: легенда
+    html.append('<div class="legend">')
+    html.append('<div class="GOOD"><b>GOOD:</b> эффективно, быстро, с индексами, время &lt; 50ms</div>')
+    html.append('<div class="ACCEPTABLE"><b>ACCEPTABLE:</b> работает, но есть риски, время &lt; 200ms</div>')
+    html.append('<div class="NEEDS_IMPROVEMENT"><b>NEEDS_IMPROVEMENT:</b> медленно, seq scan, нет индексов, время &gt; 500ms</div>')
+    html.append('<div class="CRITICAL"><b>CRITICAL:</b> DROP/DELETE без WHERE, очень медленно (&gt;2s)</div>')
+    html.append('</div>')  # .legend
+
+    html.append('</div>')  # .header-row
+
+    # Таблица
     html.append('<div class="table-wrapper">')
     html.append('<table id="jsonTable">')
     html.append('<thead><tr>')
@@ -78,7 +96,7 @@ def generate_table_html(data):
                 cell = f"<div class='cell'><pre>{text}</pre></div>"
             html.append(f"<td class='{k}'>{cell}</td>")
         html.append('</tr>')
-    html.append('</tbody></table></div></div>')
+    html.append('</tbody></table></div></div>')  # .table-wrapper и .container
     return "\n".join(html)
 
 def generate_full_html(body_html):
@@ -89,8 +107,9 @@ def generate_full_html(body_html):
     .row-needs { background: #fff9e6; }
     .row-critical { background: #fceaea; }
     .container { background:white; border-radius:8px; padding:18px; box-shadow:0 6px 18px rgba(20,20,40,0.06); }
-    h1 { margin-top:0; font-size:20px; }
-    .controls { margin-bottom:8px; }
+    .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .header-left { display: flex; flex-direction: column; }
+    .controls { margin-top: 6px; }
     input { padding:6px 10px; border-radius:6px; border:1px solid #ccc; min-width:220px; }
     .table-wrapper { max-height:600px; overflow-y:auto; border:1px solid #eee; border-radius:6px; }
     table { border-collapse:collapse; width:100%; font-size:14px; table-layout: fixed; }
@@ -100,30 +119,18 @@ def generate_full_html(body_html):
     .cell.collapsed pre { max-height:3.6em; overflow:hidden; }
     .cell button.toggle { margin-top:4px; font-size:12px; background:#f0f0f0; border:1px solid #ccc; border-radius:4px; padding:2px 6px; cursor:pointer; }
 
-    /* Ширина столбцов */
-    #jsonTable th.query, #jsonTable td.query { width: 23%; }
-    #jsonTable th.file_path, #jsonTable td.file_path { width: 7%; text-align: center;}
+    /* Ширина столбцов и центрирование */
+    #jsonTable th.query, #jsonTable td.query { width: 20%; }
+    #jsonTable th.file_path, #jsonTable td.file_path { width: 10%; text-align: center;}
     #jsonTable th.evaluation, #jsonTable td.evaluation { width: 7%; text-align: center;}
     #jsonTable th.severity, #jsonTable td.severity { width: 7%; text-align: center;}
     #jsonTable th.execution_time, #jsonTable td.execution_time { width: 7%; text-align: center;}
     #jsonTable th.issues, #jsonTable td.issues { width: 23%; }
     #jsonTable th.recommendations, #jsonTable td.recommendations { width: 26%; }
 
-    /* Легенда в правом верхнем углу */
-    .legend {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        background: #fff;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        padding: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        font-size: 13px;
-        max-width: 250px;
-        line-height: 1.4;
-    }
-    .legend div { margin-bottom: 6px; padding: 4px 6px; border-radius: 4px; }
+    /* Легенда */
+    .legend { background: #fff; border: 1px solid #ccc; border-radius: 8px; padding: 8px 12px; font-size: 12px; line-height: 1.4; max-width: 300px; }
+    .legend div { margin-bottom: 4px; padding: 2px 4px; border-radius: 4px; }
     .legend .GOOD { background: #eaf7ea; }
     .legend .ACCEPTABLE { background: #eaf2f7; }
     .legend .NEEDS_IMPROVEMENT { background: #fff9e6; }
@@ -150,30 +157,18 @@ def generate_full_html(body_html):
       }
     });
     """
-
-    legend_html = """
-    <div class="legend">
-        <div class="GOOD"><b>GOOD:</b> эффективно, быстро, с индексами, время &lt; 50ms</div>
-        <div class="ACCEPTABLE"><b>ACCEPTABLE:</b> работает, но есть риски, время &lt; 200ms</div>
-        <div class="NEEDS_IMPROVEMENT"><b>NEEDS_IMPROVEMENT:</b> медленно, seq scan, нет индексов, время &gt; 500ms</div>
-        <div class="CRITICAL"><b>CRITICAL:</b> DROP/DELETE без WHERE, очень медленно (&gt;2s)</div>
-    </div>
-    """
-
     return f"""<!doctype html>
-        <html lang="ru">
-        <head>
-        <meta charset="utf-8">
-        <title>SQL Report</title>
-        <style>{css}</style>
-        </head>
-        <body>
-        {legend_html}
-        {body_html}
-        <script>{js}</script>
-        </body>
-        </html>
-    """
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>SQL Report</title>
+<style>{css}</style>
+</head>
+<body>
+{body_html}
+<script>{js}</script>
+</body>
+</html>"""
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

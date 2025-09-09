@@ -29,6 +29,16 @@ def flatten_record(item):
 
     return flat
 
+def evaluation_class(value):
+    """Возвращает CSS-класс по значению evaluation"""
+    mapping = {
+        "GOOD": "row-good",
+        "ACCEPTABLE": "row-acceptable",
+        "NEEDS_IMPROVEMENT": "row-needs",
+        "CRITICAL": "row-critical"
+    }
+    return mapping.get(value.upper(), "")
+
 def generate_table_html(data):
     keys = []
     seen = set()
@@ -53,10 +63,18 @@ def generate_table_html(data):
     html.append('</tr></thead><tbody>')
 
     for item in data:
-        html.append('<tr>')
+        eval_value = item.get("analysis", {}).get("evaluation") if "analysis" in item else item.get("evaluation")
+        row_class = evaluation_class(eval_value) if eval_value else ""
+
+        html.append(f'<tr class="{row_class}">')
         for k in keys:
             v = item.get(k, "")
-            text = escape(str(v))
+            if isinstance(v, (dict, list)):
+                text = json.dumps(v, ensure_ascii=False, indent=2)
+            else:
+                text = str(v)
+            text = escape(text)
+
             if len(text) > 200 or "\n" in text:
                 cell = f'<div class="cell collapsed"><pre>{text}</pre><button class="toggle">Показать ещё</button></div>'
             else:
@@ -69,6 +87,10 @@ def generate_table_html(data):
 def generate_full_html(body_html):
     css = """
     body { font-family: Inter, Arial, sans-serif; margin: 18px; background: #f7f8fb; color:#111; }
+    .row-good { background: #eaf7ea; }         
+    .row-acceptable { background: #eaf2f7; }  
+    .row-needs { background: #fff9e6; }       
+    .row-critical { background: #fceaea; } 
     .container { background:white; border-radius:8px; padding:18px; box-shadow:0 6px 18px rgba(20,20,40,0.06); }
     h1 { margin-top:0; font-size:20px; }
     .controls { margin-bottom:8px; }

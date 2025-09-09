@@ -9,11 +9,27 @@ def load_json(path):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def is_table_like(data):
-    return isinstance(data, list) and data and all(isinstance(x, dict) for x in data)
+def flatten_record(item):
+    """Превращает один объект JSON в плоский словарь"""
+    flat = {}
+    flat["query"] = item.get("query", "")
+    flat["file_path"] = item.get("file_path", "")
+
+    analysis = item.get("analysis", {})
+    flat["evaluation"] = analysis.get("evaluation", "")
+    flat["severity"] = analysis.get("severity", "")
+    flat["execution_time"] = analysis.get("execution_time", "")
+
+    # Превратим списки issues и recommendations в строки
+    issues = analysis.get("issues", [])
+    recs = analysis.get("recommendations", [])
+
+    flat["issues"] = "; ".join(issues) if isinstance(issues, list) else str(issues)
+    flat["recommendations"] = "; ".join(recs) if isinstance(recs, list) else str(recs)
+
+    return flat
 
 def generate_table_html(data):
-    # собрать все ключи
     keys = []
     seen = set()
     for item in data:
@@ -24,7 +40,7 @@ def generate_table_html(data):
 
     html = []
     html.append('<div class="container">')
-    html.append('<h1>Таблица из JSON</h1>')
+    html.append('<h1>Отчёт по SQL-запросам</h1>')
     html.append('<div class="controls">')
     html.append('<input id="filter" placeholder="Фильтр (по любому полю)..." oninput="filterTable()" />')
     html.append('</div>')
@@ -40,12 +56,7 @@ def generate_table_html(data):
         html.append('<tr>')
         for k in keys:
             v = item.get(k, "")
-            if isinstance(v, (dict, list)):
-                text = json.dumps(v, ensure_ascii=False, indent=2)
-            else:
-                text = str(v)
-            text = escape(text)
-
+            text = escape(str(v))
             if len(text) > 200 or "\n" in text:
                 cell = f'<div class="cell collapsed"><pre>{text}</pre><button class="toggle">Показать ещё</button></div>'
             else:
@@ -95,7 +106,7 @@ def generate_full_html(body_html):
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>JSON Table Report</title>
+<title>SQL Report</title>
 <style>{css}</style>
 </head>
 <body>
@@ -106,19 +117,22 @@ def generate_full_html(body_html):
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Usage: python json_to_html.py input.json output.html")
+        print("Usage: python report_converter.py input.json output.html")
         sys.exit(1)
 
     INPUT = sys.argv[1]
     OUTPUT = sys.argv[2]
 
     data = load_json(INPUT)
-    if is_table_like(data):
-        body = generate_table_html(data)
-    else:
-        body = f"<pre>{escape(json.dumps(data, ensure_ascii=False, indent=2))}</pre>"
 
+    if isinstance(data, list):
+        flat_data = [flatten_record(item) for item in data]
+    else:
+        flat_data = [flatten_record(data)]
+
+    body = generate_table_html(flat_data)
     full_html = generate_full_html(body)
+
     with open(OUTPUT, "w", encoding="utf-8") as f:
         f.write(full_html)
 

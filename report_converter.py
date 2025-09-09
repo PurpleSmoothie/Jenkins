@@ -101,13 +101,33 @@ def generate_full_html(body_html):
     .cell button.toggle { margin-top:4px; font-size:12px; background:#f0f0f0; border:1px solid #ccc; border-radius:4px; padding:2px 6px; cursor:pointer; }
 
     /* Ширина столбцов */
-    #jsonTable th.query, #jsonTable td.query { width: 20%; }
-    #jsonTable th.file_path, #jsonTable td.file_path { width: 10%; }
-    #jsonTable th.evaluation, #jsonTable td.evaluation { width: 10%; }
-    #jsonTable th.severity, #jsonTable td.severity { width: 10%; }
-    #jsonTable th.execution_time, #jsonTable td.execution_time { width: 10%; }
-    #jsonTable th.issues, #jsonTable td.issues { width: 20%; }
-    #jsonTable th.recommendations, #jsonTable td.recommendations { width: 20%; }
+    #jsonTable th.query, #jsonTable td.query { width: 23%; }
+    #jsonTable th.file_path, #jsonTable td.file_path { width: 7%; text-align: center;}
+    #jsonTable th.evaluation, #jsonTable td.evaluation { width: 7%; text-align: center;}
+    #jsonTable th.severity, #jsonTable td.severity { width: 7%; text-align: center;}
+    #jsonTable th.execution_time, #jsonTable td.execution_time { width: 7%; text-align: center;}
+    #jsonTable th.issues, #jsonTable td.issues { width: 23%; }
+    #jsonTable th.recommendations, #jsonTable td.recommendations { width: 26%; }
+
+    /* Легенда в правом верхнем углу */
+    .legend {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        font-size: 13px;
+        max-width: 250px;
+        line-height: 1.4;
+    }
+    .legend div { margin-bottom: 6px; padding: 4px 6px; border-radius: 4px; }
+    .legend .GOOD { background: #eaf7ea; }
+    .legend .ACCEPTABLE { background: #eaf2f7; }
+    .legend .NEEDS_IMPROVEMENT { background: #fff9e6; }
+    .legend .CRITICAL { background: #fceaea; }
     """
     js = """
     function filterTable(){
@@ -130,18 +150,30 @@ def generate_full_html(body_html):
       }
     });
     """
+
+    legend_html = """
+    <div class="legend">
+        <div class="GOOD"><b>GOOD:</b> эффективно, быстро, с индексами, время &lt; 50ms</div>
+        <div class="ACCEPTABLE"><b>ACCEPTABLE:</b> работает, но есть риски, время &lt; 200ms</div>
+        <div class="NEEDS_IMPROVEMENT"><b>NEEDS_IMPROVEMENT:</b> медленно, seq scan, нет индексов, время &gt; 500ms</div>
+        <div class="CRITICAL"><b>CRITICAL:</b> DROP/DELETE без WHERE, очень медленно (&gt;2s)</div>
+    </div>
+    """
+
     return f"""<!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<title>SQL Report</title>
-<style>{css}</style>
-</head>
-<body>
-{body_html}
-<script>{js}</script>
-</body>
-</html>"""
+        <html lang="ru">
+        <head>
+        <meta charset="utf-8">
+        <title>SQL Report</title>
+        <style>{css}</style>
+        </head>
+        <body>
+        {legend_html}
+        {body_html}
+        <script>{js}</script>
+        </body>
+        </html>
+    """
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

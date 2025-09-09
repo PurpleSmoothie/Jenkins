@@ -8,33 +8,38 @@ import logging
 import re
 from typing import Dict, List, Any
 
+
 import openai
+
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
 logger = logging.getLogger(__name__)
 
 
-class OpenAIAnalyzer:
+class OpenRouterAnalyzer:
     def __init__(self):
-        self.api_key = os.getenv("OPENAI_API_KEY")
+
+        self.api_key = os.getenv("OPENROUTER_API_KEY")
         if not self.api_key:
-            logger.error("OPENAI_API_KEY не задан в переменных окружения!")
+            logger.error("OPENROUTER_API_KEY не задан в переменных окружения!")
             raise ValueError("API ключ не найден")
 
-        self.base_url = "https://api.openai.com/v1"
-        self.model = "gpt-4o-mini"
+
+        self.base_url = "https://openrouter.ai/api/v1"
+        self.model = "mistralai/mistral-7b-instruct:free"
 
         try:
             self.client = openai.OpenAI(
                 api_key=self.api_key,
                 base_url=self.base_url
             )
-            logger.info("OpenAI клиент инициализирован")
+            logger.info("OpenRouter клиент инициализирован")
         except Exception as e:
-            logger.error(f"Ошибка инициализации OpenAI: {e}")
+            logger.error(f"Ошибка инициализации OpenRouter: {e}")
             raise
 
     def _build_prompt(self, query_data: Dict[str, Any]) -> str:
+        """Формируем строгий промпт, чтобы LLM всегда возвращал issues и recommendations"""
         explain_output = '\n'.join(query_data.get('explain_output', [])) if query_data.get('explain_output') else 'N/A'
         tables = ', '.join(query_data.get('tables', [])) if query_data.get('tables') else 'N/A'
 
@@ -56,21 +61,50 @@ EXPLAIN ANALYZE:
 - NEEDS_IMPROVEMENT: медленно, seq scan, нет индексов, время > 500ms
 - CRITICAL: DROP/DELETE без WHERE, очень медленно (>2s)
 
-Обязательно заполни ВСЕ поля.
+Обязательно заполни ВСЕ поля:
+- Если проблем нет — напиши "No performance issues detected"
+- Если проблем нет — напиши "Query is well-optimized for current data size"
+- Никогда не используй пустые массивы
+- Никогда не используй | в evaluation — только одно значение!
+
 Верни ТОЛЬКО JSON:
 {{
-  "evaluation": "GOOD",
+  "evaluation": "GOOD",  // Одно значение!
   "severity": "LOW",
   "execution_time": "10ms",
-  "issues": ["описание проблемы 1"],
-  "recommendations": ["рекомендация 1"]
+  "issues": ["описание проблемы 1", "описание проблемы 2"],
+  "recommendations": ["рекомендация 1", "рекомендация 2"]
+}}
+Пример 1:
+Запрос: SELECT * FROM users WHERE id = 1;
+EXPLAIN: Index Scan using users_pkey on users ...
+Ответ: {{
+  "evaluation": "GOOD",
+  "severity": "LOW",
+  "execution_time": "0.1ms",
+  "issues": ["No issues detected"],
+  "recommendations": ["Query uses primary key index, optimal for lookups"]
+}}
+
+Пример 2:
+Запрос: SELECT * FROM logs;
+EXPLAIN: Seq Scan on logs ...
+Ответ: {{
+  "evaluation": "NEEDS_IMPROVEMENT",
+  "severity": "MEDIUM",
+  "execution_time": "120ms",
+  "issues": ["Full table scan on large table"],
+  "recommendations": ["Create index on frequently queried columns"]
 }}
 """
 
     def _extract_json(self, text: str) -> Dict[str, Any]:
+        """Извлекает JSON из любого текста — максимально надёжно"""
+        # Убираем Markdown
         text = re.sub(r'```json\s*', '', text)
         text = re.sub(r'```\s*', '', text)
 
+        # Ищем первую полную JSON-структуру
         stack = []
         start = -1
         for i, char in enumerate(text):
@@ -81,7 +115,7 @@ EXPLAIN ANALYZE:
             elif char == '}':
                 if stack:
                     stack.pop()
-                    if not stack:
+                    if not stack:  # Сбалансирована
                         try:
                             return json.loads(text[start:i+1])
                         except json.JSONDecodeError as e:
@@ -89,7 +123,27 @@ EXPLAIN ANALYZE:
                             return None
         return None
 
+    def _fix_evaluation(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Исправляет некорректные значения evaluation"""
+        if "|" in str(result.get("evaluation", "")):
+            result["evaluation"] = "ACCEPTABLE"
+            result["issues"] = result.get("issues", []) + ["LLM вернул несколько значений в evaluation"]
+        return result
+
+    def _ensure_non_empty_fields(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Гарантирует, что issues и recommendations не пустые"""
+        if not result.get("issues"):
+            result["issues"] = ["No performance issues detected"]
+
+        if not result.get("recommendations"):
+            result["recommendations"] = [
+                "Query is efficient for current data size",
+                "Consider indexing if table grows beyond 10k rows"
+            ]
+        return result
+
     def analyze_query(self, query_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Анализирует один SQL-запрос через LLM"""
         prompt = self._build_prompt(query_data)
 
         try:
@@ -101,27 +155,43 @@ EXPLAIN ANALYZE:
             )
             content = response.choices[0].message.content.strip()
             logger.info(f"LLM response for query: {query_data['query'][:50]}...")
+            logger.debug(f"Raw LLM output: {content}")
 
+            # Попытка 1: прямой JSON
             try:
                 result = json.loads(content)
                 if isinstance(result, dict):
+                    result = self._fix_evaluation(result)
+                    result = self._ensure_non_empty_fields(result)
                     return result
             except json.JSONDecodeError:
+                pass
+
+            # Попытка 2: извлечение JSON из текста
+            try:
                 extracted = self._extract_json(content)
                 if extracted:
+                    extracted = self._fix_evaluation(extracted)
+                    extracted = self._ensure_non_empty_fields(extracted)
                     return extracted
+            except Exception as e:
+                logger.warning(f"Ошибка при извлечении JSON: {e}")
 
-            logger.error("Не удалось извлечь JSON из ответа LLM")
+            # Фоллбэк: ручной анализ
+            logger.error(f"Не удалось извлечь JSON из ответа LLM")
             return {
                 "evaluation": "ACCEPTABLE",
                 "severity": "MEDIUM",
                 "execution_time": "unknown",
                 "issues": ["Не удалось распарсить ответ LLM"],
-                "recommendations": ["Проверьте запрос вручную"]
+                "recommendations": [
+                    "Проверьте запрос вручную",
+                    "Рассмотрите возможность создания индексов на часто используемые столбцы"
+                ]
             }
 
         except Exception as e:
-            logger.error(f"Ошибка при вызове OpenAI: {e}")
+            logger.error(f"Ошибка при вызове OpenRouter: {e}")
             return {
                 "evaluation": "ACCEPTABLE",
                 "severity": "HIGH",
@@ -131,7 +201,8 @@ EXPLAIN ANALYZE:
             }
 
 
-def generate_report(results_file: str, analyzer: OpenAIAnalyzer) -> List[Dict]:
+def generate_report(results_file: str, analyzer: OpenRouterAnalyzer) -> List[Dict]:
+    """Генерирует отчёт по всем запросам"""
     try:
         with open(results_file, 'r', encoding='utf-8') as f:
             results = json.load(f)
@@ -164,6 +235,7 @@ def generate_report(results_file: str, analyzer: OpenAIAnalyzer) -> List[Dict]:
 
 
 def check_deployment_criteria(report: List[Dict]) -> bool:
+    """Проверяет, можно ли разрешить деплой"""
     critical_count = 0
     improvable_count = 0
     total = len(report)
@@ -197,13 +269,13 @@ def check_deployment_criteria(report: List[Dict]) -> bool:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='SQL анализатор через OpenAI')
+    parser = argparse.ArgumentParser(description='SQL анализатор через OpenRouter')
     parser.add_argument('--results', default='explain_results.json', help='Входной файл с EXPLAIN ANALYZE')
     parser.add_argument('--report', default='llm_report.json', help='Выходной файл отчёта')
     args = parser.parse_args()
 
     try:
-        analyzer = OpenAIAnalyzer()
+        analyzer = OpenRouterAnalyzer()
     except Exception as e:
         logger.error(f"Не удалось инициализировать анализатор: {e}")
         sys.exit(1)

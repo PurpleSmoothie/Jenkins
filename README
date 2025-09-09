@@ -1,0 +1,62 @@
+SQL Analyzer
+Описание
+
+Проект для автоматического анализа SQL-запросов:
+
+Парсинг .sql файлов
+
+Выполнение EXPLAIN ANALYZE в PostgreSQL
+
+Анализ результатов через LLM (OpenRouter API)
+
+Генерация HTML-отчёта и публикация его в Jenkins
+
+Структура
+├── Dockerfile                # сборка контейнера анализатора
+├── docker-compose.yml        # запуск БД, анализатора и Jenkins
+├── init.sql                  # инициализация тестовой БД
+├── Jenkinsfile               # CI-пайплайн для Jenkins
+├── sqlParse.py               # парсер SQL
+├── explainRunner.py          # EXPLAIN ANALYZE
+├── LLM_aggregator.py         # анализ через LLM
+├── report_converter.py       # генерация HTML отчёта
+├── requirements.txt          # зависимости
+├── example.sql               # тестовые SQL-запросы
+
+Подготовка
+
+Установить Docker и docker-compose.
+
+Создать файл .env в корне проекта:
+
+OPENROUTER_API_KEY=sk-ваш_ключ
+
+Запуск
+docker-compose up --build
+
+
+При старте будут подняты:
+
+PostgreSQL (с тестовой схемой из init.sql)
+
+Анализатор SQL (выполнит парсинг → explain → анализ → отчёт)
+
+Jenkins (доступен на http://localhost:8080
+)
+
+После выполнения пайплайна итоговый отчёт появится в report.html в корне проекта и также будет доступен в Jenkins как артефакт.
+
+Использование Jenkins
+
+Перейти в Jenkins: http://localhost:8080
+.
+
+Создать новый Pipeline job.
+
+Указать в настройках, чтобы pipeline читал Jenkinsfile из этого репозитория.
+
+Запустить сборку — отчёт прикрепится как артефакт.
+
+
+
+

@@ -20,7 +20,6 @@ def flatten_record(item):
     flat["severity"] = analysis.get("severity", "")
     flat["execution_time"] = analysis.get("execution_time", "")
 
-    # Превратим списки issues и recommendations в строки
     issues = analysis.get("issues", [])
     recs = analysis.get("recommendations", [])
 
@@ -30,17 +29,14 @@ def flatten_record(item):
     return flat
 
 def evaluation_class(value):
-    """Возвращает CSS-класс по значению evaluation (с учётом пробелов/регистра)"""
-    if value is None:
-        return ""
-    val = str(value).strip().upper()
+    """Возвращает CSS-класс по значению evaluation"""
     mapping = {
         "GOOD": "row-good",
         "ACCEPTABLE": "row-acceptable",
         "NEEDS_IMPROVEMENT": "row-needs",
         "CRITICAL": "row-critical"
     }
-    return mapping.get(val, "")
+    return mapping.get(value.upper(), "")
 
 def generate_table_html(data):
     keys = []
@@ -62,12 +58,11 @@ def generate_table_html(data):
     html.append('<table id="jsonTable">')
     html.append('<thead><tr>')
     for k in keys:
-        html.append(f"<th>{escape(str(k))}</th>")
+        html.append(f"<th class='{k}'>{escape(str(k))}</th>")
     html.append('</tr></thead><tbody>')
 
     for item in data:
-        eval_value = item.get("evaluation")
-        row_class = evaluation_class(eval_value)
+        row_class = evaluation_class(item.get("evaluation", ""))
         html.append(f'<tr class="{row_class}">')
         for k in keys:
             v = item.get(k, "")
@@ -81,7 +76,7 @@ def generate_table_html(data):
                 cell = f'<div class="cell collapsed"><pre>{text}</pre><button class="toggle">Показать ещё</button></div>'
             else:
                 cell = f"<div class='cell'><pre>{text}</pre></div>"
-            html.append(f"<td>{cell}</td>")
+            html.append(f"<td class='{k}'>{cell}</td>")
         html.append('</tr>')
     html.append('</tbody></table></div></div>')
     return "\n".join(html)
@@ -89,23 +84,30 @@ def generate_table_html(data):
 def generate_full_html(body_html):
     css = """
     body { font-family: Inter, Arial, sans-serif; margin: 18px; background: #f7f8fb; color:#111; }
+    .row-good { background: #eaf7ea; }
+    .row-acceptable { background: #eaf2f7; }
+    .row-needs { background: #fff9e6; }
+    .row-critical { background: #fceaea; }
     .container { background:white; border-radius:8px; padding:18px; box-shadow:0 6px 18px rgba(20,20,40,0.06); }
     h1 { margin-top:0; font-size:20px; }
     .controls { margin-bottom:8px; }
     input { padding:6px 10px; border-radius:6px; border:1px solid #ccc; min-width:220px; }
     .table-wrapper { max-height:600px; overflow-y:auto; border:1px solid #eee; border-radius:6px; }
-    table { border-collapse:collapse; width:100%; font-size:14px; }
-    th, td { padding:6px 8px; border-bottom:1px solid #eee; vertical-align:top; }
+    table { border-collapse:collapse; width:100%; font-size:14px; table-layout: fixed; }
+    th, td { padding:6px 8px; border-bottom:1px solid #eee; vertical-align:top; word-wrap: break-word; }
     th { background:#fafafa; position:sticky; top:0; }
     pre { margin:0; white-space:pre-wrap; word-break:break-word; }
     .cell.collapsed pre { max-height:3.6em; overflow:hidden; }
     .cell button.toggle { margin-top:4px; font-size:12px; background:#f0f0f0; border:1px solid #ccc; border-radius:4px; padding:2px 6px; cursor:pointer; }
-    /* Цвета для строк */
-    tbody tr.row-good > td { background: #eef8f0; }
-    tbody tr.row-acceptable > td { background: #eef5fa; }
-    tbody tr.row-needs > td { background: #fff7e8; }
-    tbody tr.row-critical > td { background: #fbeeee; }
-    .cell { background: transparent; }
+
+    /* Ширина столбцов */
+    #jsonTable th.query, #jsonTable td.query { width: 20%; }
+    #jsonTable th.file_path, #jsonTable td.file_path { width: 10%; }
+    #jsonTable th.evaluation, #jsonTable td.evaluation { width: 10%; }
+    #jsonTable th.severity, #jsonTable td.severity { width: 10%; }
+    #jsonTable th.execution_time, #jsonTable td.execution_time { width: 10%; }
+    #jsonTable th.issues, #jsonTable td.issues { width: 20%; }
+    #jsonTable th.recommendations, #jsonTable td.recommendations { width: 20%; }
     """
     js = """
     function filterTable(){

@@ -25,9 +25,6 @@ WHERE town_to = 'Москва' AND time_out < '2024-01-15';
 DELETE FROM Pass_in_trip
 WHERE trip = 5;
 
-DELETE FROM Passengers
-WHERE is_active = false AND created_at < '2023-01-01';
-
 SELECT
 p.full_name,
 c.name as company_name,

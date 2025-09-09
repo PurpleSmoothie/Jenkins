@@ -14,10 +14,6 @@ VALUES ('Иван Иванов', '+79161234567', 'ivan@mail.com');
 INSERT INTO Pass_in_trip (trip, passenger, place)
 VALUES (1, 1, '12A');
 
-UPDATE Passengers
-SET email = 'new_email@mail.com'
-WHERE id = 1;
-
 UPDATE Trip
 SET time_in = '2024-01-15 14:30:00'
 WHERE town_to = 'Москва' AND time_out < '2024-01-15';

@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-"""
-SQL Query Analyzer через OpenRouter (бесплатный API)
-"""
 
 import json
 import argparse
@@ -11,7 +8,7 @@ import logging
 import re
 from typing import Dict, List, Any
 
-# Используем openai-клиент (совместим с OpenRouter)
+
 import openai
 
 
@@ -24,7 +21,7 @@ class OpenRouterAnalyzer:
 
         self.api_key = os.getenv("OPENROUTER_API_KEY")
         if not self.api_key:
-            logger.error("❌ OPENROUTER_API_KEY не задан в переменных окружения!")
+            logger.error("OPENROUTER_API_KEY не задан в переменных окружения!")
             raise ValueError("API ключ не найден")
 
 
@@ -36,9 +33,9 @@ class OpenRouterAnalyzer:
                 api_key=self.api_key,
                 base_url=self.base_url
             )
-            logger.info("✅ OpenRouter клиент инициализирован")
+            logger.info("OpenRouter клиент инициализирован")
         except Exception as e:
-            logger.error(f"❌ Ошибка инициализации OpenRouter: {e}")
+            logger.error(f"Ошибка инициализации OpenRouter: {e}")
             raise
 
     def _build_prompt(self, query_data: Dict[str, Any]) -> str:
@@ -122,7 +119,7 @@ EXPLAIN: Seq Scan on logs ...
                         try:
                             return json.loads(text[start:i+1])
                         except json.JSONDecodeError as e:
-                            logger.warning(f"❌ Ошибка парсинга JSON: {e}")
+                            logger.warning(f"Ошибка парсинга JSON: {e}")
                             return None
         return None
 
@@ -157,7 +154,7 @@ EXPLAIN: Seq Scan on logs ...
                 max_tokens=500
             )
             content = response.choices[0].message.content.strip()
-            logger.info(f"📝 LLM response for query: {query_data['query'][:50]}...")
+            logger.info(f"LLM response for query: {query_data['query'][:50]}...")
             logger.debug(f"Raw LLM output: {content}")
 
             # Попытка 1: прямой JSON
@@ -178,10 +175,10 @@ EXPLAIN: Seq Scan on logs ...
                     extracted = self._ensure_non_empty_fields(extracted)
                     return extracted
             except Exception as e:
-                logger.warning(f"⚠️ Ошибка при извлечении JSON: {e}")
+                logger.warning(f"Ошибка при извлечении JSON: {e}")
 
             # Фоллбэк: ручной анализ
-            logger.error(f"❌ Не удалось извлечь JSON из ответа LLM")
+            logger.error(f"Не удалось извлечь JSON из ответа LLM")
             return {
                 "evaluation": "ACCEPTABLE",
                 "severity": "MEDIUM",
@@ -194,7 +191,7 @@ EXPLAIN: Seq Scan on logs ...
             }
 
         except Exception as e:
-            logger.error(f"❌ Ошибка при вызове OpenRouter: {e}")
+            logger.error(f"Ошибка при вызове OpenRouter: {e}")
             return {
                 "evaluation": "ACCEPTABLE",
                 "severity": "HIGH",
@@ -210,7 +207,7 @@ def generate_report(results_file: str, analyzer: OpenRouterAnalyzer) -> List[Dic
         with open(results_file, 'r', encoding='utf-8') as f:
             results = json.load(f)
     except Exception as e:
-        logger.error(f"❌ Не удалось прочитать {results_file}: {e}")
+        logger.error(f"Не удалось прочитать {results_file}: {e}")
         sys.exit(1)
 
     report = []
@@ -244,7 +241,7 @@ def check_deployment_criteria(report: List[Dict]) -> bool:
     total = len(report)
 
     if total == 0:
-        print("⚠️ Нет SQL-запросов для анализа!")
+        print("Нет SQL-запросов для анализа!")
         return False
 
     for item in report:
@@ -254,20 +251,20 @@ def check_deployment_criteria(report: List[Dict]) -> bool:
         if eval_status in ["NEEDS_IMPROVEMENT", "CRITICAL"]:
             improvable_count += 1
 
-    print(f"\n📊 Результаты анализа:")
+    print(f"\nРезультаты анализа:")
     print(f"- Всего запросов: {total}")
     print(f"- Критических: {critical_count}")
     print(f"- Для улучшения: {improvable_count}/{total} ({improvable_count / total:.0%})")
 
     if critical_count > 0:
-        print("❌ Обнаружены критические запросы! Деплой запрещён.")
+        print("Обнаружены критические запросы! Деплой запрещён.")
         return False
 
     if improvable_count / total > 0.6:
-        print("❌ Слишком много запросов требуют улучшения (>60%). Деплой запрещён.")
+        print("Слишком много запросов требуют улучшения (>60%). Деплой запрещён.")
         return False
 
-    print("✅ Все запросы в порядке. Деплой разрешён.")
+    print("Все запросы в порядке. Деплой разрешён.")
     return True
 
 
@@ -280,7 +277,7 @@ def main():
     try:
         analyzer = OpenRouterAnalyzer()
     except Exception as e:
-        logger.error(f"❌ Не удалось инициализировать анализатор: {e}")
+        logger.error(f"Не удалось инициализировать анализатор: {e}")
         sys.exit(1)
 
     report = generate_report(args.results, analyzer)
@@ -288,9 +285,9 @@ def main():
     try:
         with open(args.report, 'w', encoding='utf-8') as f:
             json.dump(report, f, ensure_ascii=False, indent=2)
-        logger.info(f"✅ Отчёт сохранён: {args.report}")
+        logger.info(f"Отчёт сохранён: {args.report}")
     except Exception as e:
-        logger.error(f"❌ Не удалось сохранить отчёт: {e}")
+        logger.error(f"Не удалось сохранить отчёт: {e}")
         sys.exit(1)
 
     if not check_deployment_criteria(report):

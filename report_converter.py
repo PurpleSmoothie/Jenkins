@@ -101,13 +101,13 @@ def generate_full_html(body_html):
     .cell button.toggle { margin-top:4px; font-size:12px; background:#f0f0f0; border:1px solid #ccc; border-radius:4px; padding:2px 6px; cursor:pointer; }
 
     /* Ширина столбцов */
-    #jsonTable th.query, #jsonTable td.query { width: 20%; }
-    #jsonTable th.file_path, #jsonTable td.file_path { width: 10%; }
-    #jsonTable th.evaluation, #jsonTable td.evaluation { width: 10%; }
-    #jsonTable th.severity, #jsonTable td.severity { width: 10%; }
-    #jsonTable th.execution_time, #jsonTable td.execution_time { width: 10%; }
-    #jsonTable th.issues, #jsonTable td.issues { width: 20%; }
-    #jsonTable th.recommendations, #jsonTable td.recommendations { width: 20%; }
+    #jsonTable th.query, #jsonTable td.query { width: 23%; }
+    #jsonTable th.file_path, #jsonTable td.file_path { width: 7%; text-align: center;}
+    #jsonTable th.evaluation, #jsonTable td.evaluation { width: 7%; text-align: center;}
+    #jsonTable th.severity, #jsonTable td.severity { width: 7%; text-align: center;}
+    #jsonTable th.execution_time, #jsonTable td.execution_time { width: 7%; text-align: center;}
+    #jsonTable th.issues, #jsonTable td.issues { width: 23%; }
+    #jsonTable th.recommendations, #jsonTable td.recommendations { width: 26%; }
     """
     js = """
     function filterTable(){

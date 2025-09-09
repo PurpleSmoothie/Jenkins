@@ -30,14 +30,17 @@ def flatten_record(item):
     return flat
 
 def evaluation_class(value):
-    """Возвращает CSS-класс по значению evaluation"""
+    """Возвращает CSS-класс по значению evaluation (с учётом пробелов/регистра)"""
+    if value is None:
+        return ""
+    val = str(value).strip().upper()
     mapping = {
         "GOOD": "row-good",
         "ACCEPTABLE": "row-acceptable",
         "NEEDS_IMPROVEMENT": "row-needs",
         "CRITICAL": "row-critical"
     }
-    return mapping.get(value.upper(), "")
+    return mapping.get(val, "")
 
 def generate_table_html(data):
     keys = []
@@ -63,9 +66,8 @@ def generate_table_html(data):
     html.append('</tr></thead><tbody>')
 
     for item in data:
-        eval_value = item.get("analysis", {}).get("evaluation") if "analysis" in item else item.get("evaluation")
-        row_class = evaluation_class(eval_value) if eval_value else ""
-
+        eval_value = item.get("evaluation")
+        row_class = evaluation_class(eval_value)
         html.append(f'<tr class="{row_class}">')
         for k in keys:
             v = item.get(k, "")
@@ -87,10 +89,6 @@ def generate_table_html(data):
 def generate_full_html(body_html):
     css = """
     body { font-family: Inter, Arial, sans-serif; margin: 18px; background: #f7f8fb; color:#111; }
-    .row-good { background: #eaf7ea; }         
-    .row-acceptable { background: #eaf2f7; }  
-    .row-needs { background: #fff9e6; }       
-    .row-critical { background: #fceaea; } 
     .container { background:white; border-radius:8px; padding:18px; box-shadow:0 6px 18px rgba(20,20,40,0.06); }
     h1 { margin-top:0; font-size:20px; }
     .controls { margin-bottom:8px; }
@@ -102,6 +100,12 @@ def generate_full_html(body_html):
     pre { margin:0; white-space:pre-wrap; word-break:break-word; }
     .cell.collapsed pre { max-height:3.6em; overflow:hidden; }
     .cell button.toggle { margin-top:4px; font-size:12px; background:#f0f0f0; border:1px solid #ccc; border-radius:4px; padding:2px 6px; cursor:pointer; }
+    /* Цвета для строк */
+    tbody tr.row-good > td { background: #eef8f0; }
+    tbody tr.row-acceptable > td { background: #eef5fa; }
+    tbody tr.row-needs > td { background: #fff7e8; }
+    tbody tr.row-critical > td { background: #fbeeee; }
+    .cell { background: transparent; }
     """
     js = """
     function filterTable(){
